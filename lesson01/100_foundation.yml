@@ -477,15 +477,27 @@ Outputs:
     Value: !Ref PrivateSubnet02
     Export:
       Name: !Sub "${Service}-${Env}-private-subnet-02"
-  SecurityGroupLb:
-    Value: !Ref SecurityGroupLb
+  PrivateSubnet03:
+    Value: !Ref PrivateSubnet03
     Export:
-      Name: !Sub "${Service}-${Env}-security-group-lb"
+      Name: !Sub "${Service}-${Env}-private-subnet-03"
+  PrivateSubnet04:
+    Value: !Ref PrivateSubnet04
+    Export:
+      Name: !Sub "${Service}-${Env}-private-subnet-04"
+  SecurityGroupAlb:
+    Value: !Ref SecurityGroupAlb
+    Export:
+      Name: !Sub "${Service}-${Env}-security-group-alb"
   SecurityGroupFargate:
     Value: !Ref SecurityGroupFargate
     Export:
       Name: !Sub "${Service}-${Env}-security-group-fargate"
-  DynamoDBEndpoint:
-    Value: !Ref DynamoDBEndpoint
+  SecurityGroupEfs:
+    Value: !Ref SecurityGroupEfs
     Export:
-      Name: !Sub "${Service}-${Env}-vpc-endpoint-dynamodb"
+      Name: !Sub "${Service}-${Env}-security-group-efs"
+  SecurityGroupRds:
+    Value: !Ref SecurityGroupRds
+    Export:
+      Name: !Sub "${Service}-${Env}-security-group-rds"
