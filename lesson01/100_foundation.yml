@@ -1,0 +1,491 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description:
+  Create VPC, Subnet and Security Group
+
+Metadata:
+  "AWS::CloudFormation::Interface":
+    ParameterGroups:
+      - Label:
+          default: "Env and Service Prefix"
+        Parameters:
+          - Env
+          - Service
+      - Label:
+          default: "Network Configuration"
+        Parameters:
+          - VpcCidrBlock
+          - PublicSubnet01CidrBlock
+          - PublicSubnet02CidrBlock
+          - PrivateSubnet01CidrBlock
+          - PrivateSubnet02CidrBlock
+          - PrivateSubnet03CidrBlock
+          - PrivateSubnet04CidrBlock
+    ParameterLabels:
+      Env:
+        default: "Env"
+      Service:
+        default: "Service"
+      VpcCidrBlock:
+        default: "VpcCidrBlock"
+      PublicSubnet01CidrBlock:
+        default: "PublicSubnet01CidrBlock"
+      PublicSubnet02CidrBlock:
+        default: "PublicSubnet02CidrBlock"
+      PrivateSubnet01CidrBlock:
+        default: "PrivateSubnet01CidrBlock"
+      PrivateSubnet02CidrBlock:
+        default: "PrivateSubnet02CidrBlock"
+      PrivateSubnet03CidrBlock:
+        default: "PrivateSubnet03CidrBlock"
+      PrivateSubnet04CidrBlock:
+        default: "PrivateSubnet04CidrBlock"
+# ------------------------------------------------------------#
+# Input Parameters
+# ------------------------------------------------------------#
+Parameters:
+  Env:
+    Type: String
+    AllowedValues:
+      - production
+      - staging
+  Service:
+    Type: String
+    Default: "wordpress-sample"
+  VpcCidrBlock:
+    Type: String
+    Default: "10.0.0.0/16"
+  PublicSubnet01CidrBlock:
+    Type: String
+    Default: "10.0.10.0/24"
+  PublicSubnet02CidrBlock:
+    Type: String
+    Default: "10.0.11.0/24"
+  PrivateSubnet01CidrBlock:
+    Type: String
+    Default: "10.0.100.0/24"
+  PrivateSubnet02CidrBlock:
+    Type: String
+    Default: "10.0.101.0/24"
+  PrivateSubnet03CidrBlock:
+    Type: String
+    Default: "10.0.200.0/24"
+  PrivateSubnet04CidrBlock:
+    Type: String
+    Default: "10.0.201.0/24"
+
+Resources:
+  # ------------------------------------------------------------#
+  # VPC
+  # ------------------------------------------------------------#
+  VPC:
+    Type: "AWS::EC2::VPC"
+    Properties:
+      CidrBlock: !Ref VpcCidrBlock
+      EnableDnsSupport: "true"
+      EnableDnsHostnames: "true"
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-vpc"
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+  # ------------------------------------------------------------#
+  # Internet Gateway
+  # ------------------------------------------------------------#
+  InternetGateway:
+    Type: "AWS::EC2::InternetGateway"
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-internet-gateway"
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+  InternetGatewayAttachment:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+  # ------------------------------------------------------------#
+  # Subnet
+  # ------------------------------------------------------------#
+  PublicSubnet01:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      AvailabilityZone: "ap-northeast-1a"
+      CidrBlock: !Ref PublicSubnet01CidrBlock
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-public-subnet-01"
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+  PublicSubnet02:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      AvailabilityZone: "ap-northeast-1c"
+      CidrBlock: !Ref PublicSubnet02CidrBlock
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-public-subnet-02"
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+  PrivateSubnet01:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      AvailabilityZone: "ap-northeast-1a"
+      CidrBlock: !Ref PrivateSubnet01CidrBlock
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-private-subnet-01"
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+  PrivateSubnet02:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      AvailabilityZone: "ap-northeast-1c"
+      CidrBlock: !Ref PrivateSubnet02CidrBlock
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-private-subnet-02"
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+  PrivateSubnet03:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      AvailabilityZone: "ap-northeast-1a"
+      CidrBlock: !Ref PrivateSubnet03CidrBlock
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-private-subnet-03"
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+  PrivateSubnet04:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      AvailabilityZone: "ap-northeast-1c"
+      CidrBlock: !Ref PrivateSubnet04CidrBlock
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-private-subnet-04"
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+  # ------------------------------------------------------------#
+  # Route Table
+  # ------------------------------------------------------------#
+  PublicSubnet01RouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-public-subnet01-route-table"
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+  PublicSubnet02RouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-public-subnet02-route-table"
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+  PrivateSubnet01RouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-private-subnet01-route-table"
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+  PrivateSubnet02RouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-private-subnet02-route-table"
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+  PrivateSubnet03RouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-private-subnet03-route-table"
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+  PrivateSubnet04RouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-private-subnet04-route-table"
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+  # ------------------------------------------------------------#
+  # Nat
+  # ------------------------------------------------------------#
+  Subnet01NatEip:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  Subnet02NatEip:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  NatGateway01:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+          - Subnet01NatEip
+          - AllocationId
+      SubnetId: !Ref PublicSubnet01
+      Tags:
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-nat-gateway01"
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+  NatGateway02:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+          - Subnet02NatEip
+          - AllocationId
+      SubnetId: !Ref PublicSubnet02
+      Tags:
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-nat-gateway02"
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+  # ------------------------------------------------------------#
+  # Routing
+  # ------------------------------------------------------------#
+  PublicSubnet01Route:
+    Type: "AWS::EC2::Route"
+    Properties:
+      RouteTableId: !Ref PublicSubnet01RouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+  PublicSubnet02Route:
+    Type: "AWS::EC2::Route"
+    Properties:
+      RouteTableId: !Ref PublicSubnet02RouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+  PrivateSubnet01Route:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateSubnet01RouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NatGateway01
+  PrivateSubnet02Route:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateSubnet02RouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NatGateway02
+  PrivateSubnet03Route:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateSubnet03RouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NatGateway01
+  PrivateSubnet04Route:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateSubnet04RouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NatGateway02
+  PublicSubnet01RouteTableAssociation:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref PublicSubnet01
+      RouteTableId: !Ref PublicSubnet01RouteTable
+  PublicSubnet02RouteTableAssociation:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref PublicSubnet02
+      RouteTableId: !Ref PublicSubnet02RouteTable
+  PrivateSubnet01RouteTableAssociation:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref PrivateSubnet01
+      RouteTableId: !Ref PrivateSubnet01RouteTable
+  PrivateSubnet02RouteTableAssociation:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref PrivateSubnet02
+      RouteTableId: !Ref PrivateSubnet02RouteTable
+  PrivateSubnet03RouteTableAssociation:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref PrivateSubnet03
+      RouteTableId: !Ref PrivateSubnet03RouteTable
+  PrivateSubnet04RouteTableAssociation:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref PrivateSubnet04
+      RouteTableId: !Ref PrivateSubnet04RouteTable
+  # ------------------------------------------------------------#
+  # Security Group
+  # ------------------------------------------------------------#
+  SecurityGroupAlb:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub "${Service}-${Env}-security-group-alb"
+      GroupDescription: !Sub "${Service}-${Env} SecurityGroupAlb"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - CidrIp: "0.0.0.0/0"
+          Description: "http"
+          FromPort: 80
+          IpProtocol: "tcp"
+          ToPort: 80
+        - CidrIp: "0.0.0.0/0"
+          Description: "https"
+          FromPort: 443
+          IpProtocol: "tcp"
+          ToPort: 443
+      Tags:
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-security-group-alb"
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+  SecurityGroupFargate:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub "${Service}-${Env}-security-group-fargate"
+      GroupDescription: !Sub "${Service}-${Env} SecurityGroupFargate"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - SourceSecurityGroupId: !Ref SecurityGroupAlb
+          Description: "http"
+          FromPort: 80
+          IpProtocol: "tcp"
+          ToPort: 80
+      Tags:
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-security-group-fargate"
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+  SecurityGroupEfs:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub "${Service}-${Env}-security-group-efs"
+      GroupDescription: !Sub "${Service}-${Env} SecurityGroupEfs"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - SourceSecurityGroupId: !Ref SecurityGroupFargate
+          Description: "efs"
+          FromPort: 2049
+          IpProtocol: "tcp"
+          ToPort: 2049
+      Tags:
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-security-group-efs"
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+  SecurityGroupRds:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub "${Service}-${Env}-security-group-rds"
+      GroupDescription: !Sub "${Service}-${Env} SecurityGroupRds"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - SourceSecurityGroupId: !Ref SecurityGroupFargate
+          Description: "rds"
+          FromPort: 3306
+          IpProtocol: "tcp"
+          ToPort: 3306
+      Tags:
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-security-group-rds"
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+# ------------------------------------------------------------#
+# Output Parameters
+# ------------------------------------------------------------#
+Outputs:
+  VPC:
+    Value: !Ref VPC
+    Export:
+      Name: !Sub "${Service}-${Env}-vpc"
+  PublicSubnet01:
+    Value: !Ref PublicSubnet01
+    Export:
+      Name: !Sub "${Service}-${Env}-public-subnet-01"
+  PublicSubnet02:
+    Value: !Ref PublicSubnet02
+    Export:
+      Name: !Sub "${Service}-${Env}-public-subnet-02"
+  PrivateSubnet01:
+    Value: !Ref PrivateSubnet01
+    Export:
+      Name: !Sub "${Service}-${Env}-private-subnet-01"
+  PrivateSubnet02:
+    Value: !Ref PrivateSubnet02
+    Export:
+      Name: !Sub "${Service}-${Env}-private-subnet-02"
+  SecurityGroupLb:
+    Value: !Ref SecurityGroupLb
+    Export:
+      Name: !Sub "${Service}-${Env}-security-group-lb"
+  SecurityGroupFargate:
+    Value: !Ref SecurityGroupFargate
+    Export:
+      Name: !Sub "${Service}-${Env}-security-group-fargate"
+  DynamoDBEndpoint:
+    Value: !Ref DynamoDBEndpoint
+    Export:
+      Name: !Sub "${Service}-${Env}-vpc-endpoint-dynamodb"
