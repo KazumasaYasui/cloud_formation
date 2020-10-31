@@ -1,0 +1,147 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description:
+  Create ALB
+
+Metadata:
+  "AWS::CloudFormation::Interface":
+    ParameterGroups:
+      - Label:
+          default: "Env and Service Prefix"
+        Parameters:
+          - Env
+          - Service
+      - Label:
+          default: "InternetAlb Configuration"
+        Parameters:
+          - InternetAlbName
+          - TargetGroupName
+    ParameterLabels:
+      Env:
+        default: "Env"
+      Service:
+        default: "Service"
+      InternetAlbName:
+        default: "InternetAlbName"
+      TargetGroupName:
+        default: "TargetGroupName"
+# ------------------------------------------------------------#
+# Input Parameters
+# ------------------------------------------------------------#
+Parameters:
+  Env:
+    Type: String
+    AllowedValues:
+      - production
+      - staging
+  Service:
+    Type: String
+    Default: "wordpress-sample"
+  InternetAlbName:
+    Type: String
+    Default: "alb"
+  TargetGroupName:
+    Type: String
+    Default: "tg"
+
+Resources:
+  # ------------------------------------------------------------#
+  # S3 Bucket
+  # ------------------------------------------------------------#
+  S3BucketLogs:
+    Type: "AWS::S3::Bucket"
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub "${Service}-${Env}-alb-accesslogs-${AWS::AccountId}"
+      LifecycleConfiguration:
+        Rules:
+          - Id: AutoDelete
+            Status: Enabled
+            ExpirationInDays: 14
+          - Id: NoncurrentVersionExpiration
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: 7
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+  # ------------------------------------------------------------#
+  # Bucket Policy
+  # ------------------------------------------------------------#
+  BucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket: !Ref S3BucketLogs
+      PolicyDocument:
+        Id: AlbLogsBucketPolicy
+        Statement:
+          - Sid: AwsAlbLogs
+            Effect: Allow
+            Principal:
+              AWS:
+                - !Ref AWS::AccountId
+            Action:
+              - s3:PutObject
+            Resource:
+              - !Sub "arn:aws:s3:::${S3BucketLogs}/*"
+  # ------------------------------------------------------------#
+  # Target Group
+  # ------------------------------------------------------------#
+  TargetGroup:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub "${Service}-${Env}-vpc"
+      Name: !Sub "${Service}-${Env}-${TargetGroupName}"
+      Protocol: HTTP
+      Port: 80
+      TargetType: ip
+      HealthCheckPath: /
+  # ------------------------------------------------------------#
+  # Internet ALB
+  # ------------------------------------------------------------#
+  InternetAlb:
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties:
+      Name: !Sub "${Service}-${Env}-${InternetAlbName}"
+      Tags:
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-${InternetAlbName}"
+      Scheme: "internet-facing"
+      LoadBalancerAttributes:
+        - Key: "deletion_protection.enabled"
+          Value: false
+        - Key: "idle_timeout.timeout_seconds"
+          Value: 60
+        - Key: "access_logs.s3.enabled"
+          Value: true
+        - Key: "access_logs.s3.bucket"
+          Value: !Ref S3BucketLogs
+      SecurityGroups:
+        - Fn::ImportValue: !Sub "${Service}-${Env}-security-group-alb"
+      Subnets:
+        - Fn::ImportValue: !Sub "${Service}-${Env}-public-subnet-01"
+        - Fn::ImportValue: !Sub "${Service}-${Env}-public-subnet-02"
+  AlbListener:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref TargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref InternetAlb
+      Port: 80
+      Protocol: HTTP
+# ------------------------------------------------------------#
+# Output Parameters
+# ------------------------------------------------------------#
+Outputs:
+  AlbTg:
+    Value: !Ref TargetGroup
+    Export:
+      Name: !Sub "${Service}-${Env}-alb-tg"
+  AlbListener:
+    Value: !Ref AlbListener
+    Export:
+      Name: !Sub "${Service}-${Env}-alb-listener"

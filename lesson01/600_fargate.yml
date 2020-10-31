@@ -1,0 +1,194 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description:
+  Create Fargate
+
+Metadata:
+  "AWS::CloudFormation::Interface":
+    ParameterGroups:
+      - Label:
+          default: "Env and Service Prefix"
+        Parameters:
+          - Env
+          - Service
+      - Label:
+          default: "Fargate for ECS Configuration"
+        Parameters:
+          - EcsClusterName
+          - EcsTaskName
+          - EcsTaskCpuUnit
+          - EcsTaskMemory
+          - EcsContainerNameWordPress
+          - EcsServiceName
+          - EcsDesiredCount
+    ParameterLabels:
+      Env:
+        default: "Env"
+      Service:
+        default: "Service"
+      EcsClusterName:
+        default: "EcsClusterName"
+      EcsTaskName:
+        default: "EcsTaskName"
+      EcsTaskCpuUnit:
+        default: "EcsTaskCpuUnit"
+      EcsTaskMemory:
+        default: "EcsTaskMemory"
+      EcsContainerNameWordPress:
+        default: "EcsContainerNameWordPress"
+      EcsServiceName:
+        default: "EcsServiceName"
+      EcsDesiredCount:
+        default: "EcsDesiredCount"
+# ------------------------------------------------------------#
+# Input Parameters
+# ------------------------------------------------------------#
+Parameters:
+  Env:
+    Type: String
+    AllowedValues:
+      - production
+  Service:
+    Type: String
+    Default: "wordpress-sample"
+  EcsClusterName:
+    Type: String
+    Default: "cluster"
+  EcsTaskName:
+    Type: String
+    Default: "task"
+  EcsTaskCpuUnit:
+    AllowedValues: [ 256, 512, 1024, 2048, 4096 ]
+    Type: String
+    Default: "256"
+  EcsTaskMemory:
+    AllowedValues: [ 256, 512, 1024, 2048, 4096 ]
+    Type: String
+    Default: "512"
+  EcsContainerNameWordPress:
+    Type: String
+    Default: "word-press-container"
+  EcsServiceName:
+    Type: String
+    Default: "service"
+  EcsDesiredCount:
+    AllowedValues: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
+    Type: Number
+    Default: 1
+
+Resources:
+  # ------------------------------------------------------------#
+  # ECS Cluster
+  # ------------------------------------------------------------#
+  EcsCluster:
+    Type: "AWS::ECS::Cluster"
+    Properties:
+      ClusterName: !Sub "${Service}-${Env}-${EcsClusterName}"
+  # ------------------------------------------------------------#
+  # ECS LogGroup
+  # ------------------------------------------------------------#
+  EcsLogGroup:
+    Type: "AWS::Logs::LogGroup"
+    Properties:
+      LogGroupName: !Sub "/ecs/logs/${Service}-${Env}-ecs-group"
+  # ------------------------------------------------------------#
+  # ECS Task Execution Role and Policy
+  # ------------------------------------------------------------#
+  EcsTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${Service}-${Env}-EcsTaskExecutionRole"
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+  EcsTaskSsmPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub "${Service}-${Env}-EcsTaskSsmPolicy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: ssm:GetParameters
+            Resource: "*"
+      Roles: !Ref EcsTaskExecutionRole
+  # ------------------------------------------------------------#
+  # ECS TaskDefinition and ContainerDefinition
+  # ------------------------------------------------------------#
+  EcsTaskDefinition:
+    Type: "AWS::ECS::TaskDefinition"
+    Properties:
+      Cpu: !Ref EcsTaskCpuUnit
+      ExecutionRoleArn: !Ref EcsTaskExecutionRole
+      Family: !Sub "${Service}-${Env}-${EcsTaskName}"
+      Memory: !Ref EcsTaskMemory
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ContainerDefinitions:
+        - Name: !Sub "${Service}-${Env}-${EcsContainerNameWordPress}"
+          Image: "wordpress:latest"
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref EcsLogGroup
+              awslogs-region: !Ref "AWS::Region"
+              awslogs-stream-prefix: !Ref Service
+          MemoryReservation: 128
+          PortMappings:
+            - HostPort: 80
+              Protocol: tcp
+              ContainerPort: 80
+          Essential: true
+          MountPoints:
+            - ContainerPath: "/var/www/html"
+              SourceVolume: !Sub "${Service}-${Env}-fargate-efs"
+          Secrets:
+            - Name: "WORDPRESS_DB_HOST"
+              ValueFrom: "WORDPRESS_DB_HOST"
+            - Name: "WORDPRESS_DB_USER"
+              ValueFrom: "WORDPRESS_DB_USER"
+            - Name: "WORDPRESS_DB_PASSWORD"
+              ValueFrom: "WORDPRESS_DB_PASSWORD"
+            - Name: "WORDPRESS_DB_NAME"
+              ValueFrom: "WORDPRESS_DB_NAME"
+      Volumes:
+        - Name: !Sub "${Service}-${Env}-fargate-efs"
+          EFSVolumeConfiguration:
+            FilesystemId:
+              Fn::ImportValue: !Sub "${Service}-${Env}-efs"
+            RootDirectory: "/"
+  # ------------------------------------------------------------#
+  # ECS Service
+  # ------------------------------------------------------------#
+  EcsService:
+    Type: AWS::ECS::Service
+    DependsOn:
+      Fn::ImportValue: !Sub "${Service}-${Env}-alb-listener"
+    Properties:
+      Cluster: !Ref EcsCluster
+      DesiredCount: !Ref EcsDesiredCount
+      HealthCheckGracePeriodSeconds: 30
+      LaunchType: FARGATE
+      PlatformVersion: "1.4.0"
+      LoadBalancers:
+        - TargetGroupArn:
+            Fn::ImportValue: !Sub "${Service}-${Env}-alb-tg"
+          ContainerPort: 80
+          ContainerName: "wordpress"
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - Fn::ImportValue: !Sub "${Service}-${Env}-security-group-fargate"
+          Subnets:
+            - Fn::ImportValue: !Sub "${Service}-${Env}-private-subnet-01"
+            - Fn::ImportValue: !Sub "${Service}-${Env}-private-subnet-02"
+      ServiceName: !Sub "${Service}-${Env}-${EcsServiceName}"
+      TaskDefinition: !Ref EcsTaskDefinition

@@ -1,0 +1,90 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description:
+  Create SSM Paraneters
+
+Metadata:
+  "AWS::CloudFormation::Interface":
+    ParameterGroups:
+      - Label:
+          default: "Env and Service Prefix"
+        Parameters:
+          - Env
+          - Service
+      - Label:
+          default: "SSM Parameters Values"
+        Parameters:
+          - DbHost
+          - DbUser
+          - DbPassword
+          - DbName
+    ParameterLabels:
+      Env:
+        default: "Env"
+      Service:
+        default: "Service"
+      DbHost:
+        default: "DbHost"
+      DbUser:
+        default: "DbUser"
+      DbPassword:
+        default: "DbPassword"
+      DbName:
+        default: "DbName"
+# ------------------------------------------------------------#
+# Input Parameters
+# ------------------------------------------------------------#
+Parameters:
+  Env:
+    Type: String
+    AllowedValues:
+      - production
+      - staging
+  Service:
+    Type: String
+    Default: "wordpress-sample"
+  DbHost:
+    Type: String
+    Default: "hoge"
+  DbUser:
+    Type: String
+    Default: "wordpress"
+  DbPassword:
+    Type: String
+    Default: "password"
+  DbName:
+    Type: String
+    Default: "wordpress"
+
+Resources:
+  # ------------------------------------------------------------#
+  # SSM Parameters
+  # ------------------------------------------------------------#
+  SsmParameterDbHost:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: WORDPRESS_DB_HOST
+      Name: WORDPRESS_DB_HOST
+      Type: String
+      Value:
+        Fn::ImportValue: !Sub "${Service}-${Env}-db-cluster-endpoint"
+  SsmParameterDbUser:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: WORDPRESS_DB_USER
+      Name: WORDPRESS_DB_USER
+      Type: String
+      Value: !Sub "${DbUser}"
+  SsmParameterDbPassword:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: WORDPRESS_DB_PASSWORD
+      Name: WORDPRESS_DB_PASSWORD
+      Type: String
+      Value: !Sub "${DbPassword}"
+  SsmParameterDbName:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: WORDPRESS_DB_NAME
+      Name: WORDPRESS_DB_NAME
+      Type: String
+      Value: !Sub "${DbName}"

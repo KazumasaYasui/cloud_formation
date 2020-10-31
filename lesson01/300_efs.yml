@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description:
+  Create FileSystem
+
+Metadata:
+  "AWS::CloudFormation::Interface":
+    ParameterGroups:
+      - Label:
+          default: "Env and Service Prefix"
+        Parameters:
+          - Env
+          - Service
+      - Label:
+          default: "FileSystem Configuration"
+        Parameters:
+          - VolumeName
+    ParameterLabels:
+      Env:
+        default: "Env"
+      Service:
+        default: "Service"
+      VolumeName:
+        default: "VolumeName"
+# ------------------------------------------------------------#
+# Input Parameters
+# ------------------------------------------------------------#
+Parameters:
+  Env:
+    Type: String
+    AllowedValues:
+      - production
+      - staging
+  Service:
+    Type: String
+    Default: "wordpress-sample"
+  VolumeName:
+    Type: String
+    MinLength: "1"
+    Default: "fargate-efs"
+
+Resources:
+  # ------------------------------------------------------------#
+  # EFS
+  # ------------------------------------------------------------#
+  FileSystem:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      PerformanceMode: generalPurpose
+      ThroughputMode: provisioned
+      ProvisionedThroughputInMibps: 50
+      FileSystemTags:
+        - Key: Name
+          Value: !Ref VolumeName
+  # ------------------------------------------------------------#
+  # Mount Target
+  # ------------------------------------------------------------#
+  MountTarget1a:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref FileSystem
+      SubnetId:
+        Fn::ImportValue: !Sub "${Service}-${Env}-private-subnet-01"
+      SecurityGroups:
+        - Fn::ImportValue: !Sub "${Service}-${Env}-security-group-efs"
+  MountTarget1c:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref FileSystem
+      SubnetId:
+        Fn::ImportValue: !Sub "${Service}-${Env}-private-subnet-02"
+      SecurityGroups:
+        - Fn::ImportValue: !Sub "${Service}-${Env}-security-group-efs"
+# ------------------------------------------------------------#
+# Output Parameters
+# ------------------------------------------------------------#
+Outputs:
+  MountTarget1aId:
+    Value: !Ref MountTarget1a
+    Export:
+      Name: !Sub "${Service}-${Env}-mt1a"
+  MountTarget1cId:
+    Value: !Ref MountTarget1c
+    Export:
+      Name: !Sub "${Service}-${Env}-mt1c"
+  FileSystemId:
+    Value: !Ref FileSystem
+    Export:
+      Name: !Sub "${Service}-${Env}-efs"

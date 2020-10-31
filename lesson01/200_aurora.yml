@@ -1,0 +1,193 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description:
+  Create DataBase
+
+Metadata:
+  "AWS::CloudFormation::Interface":
+    ParameterGroups:
+      - Label:
+          default: "Env and Service Prefix"
+        Parameters:
+          - Env
+          - Service
+      - Label:
+          default: "Database Configuration"
+        Parameters:
+          - DbMasterUser
+          - DbMasterPassword
+    ParameterLabels:
+      Env:
+        default: "Env"
+      Service:
+        default: "Service"
+      DbMasterUser:
+        default: "DbMasterUser"
+      DbMasterPassword:
+        default: "DbMasterPassword"
+# ------------------------------------------------------------#
+# Input Parameters
+# ------------------------------------------------------------#
+Parameters:
+  Env:
+    Type: String
+    AllowedValues:
+      - production
+      - staging
+  Service:
+    Type: String
+    Default: "wordpress-sample"
+  DbMasterUser:
+    Type: String
+    Default: "root"
+  DbMasterPassword:
+    Type: String
+    Default: "password"
+# ------------------------------------------------------------#
+# Mappings
+# ------------------------------------------------------------#
+Mappings:
+  production:
+    Aurora:
+      Size: db.r5.large
+  staging:
+    Aurora:
+      Size: db.t3.small
+
+Resources:
+  # ------------------------------------------------------------#
+  # Aurora Settings
+  # ------------------------------------------------------------#
+  Aurora57dbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupName: !Sub "${Service}-${Env}-aurora-subnet-group"
+      DBSubnetGroupDescription: !Sub "${Service} ${Env} aurora subnet group"
+      SubnetIds:
+        - Fn::ImportValue: !Sub "${Service}-${Env}-private-subnet-03"
+        - Fn::ImportValue: !Sub "${Service}-${Env}-private-subnet-04"
+      Tags:
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-aurora-subnet-group"
+  Aurora57dbClusterParameterGroup:
+    Type: AWS::RDS::DBClusterParameterGroup
+    Properties:
+      Family: "aurora-mysql5.7"
+      Description: !Sub "${Service} ${Env} aurora cluster parameter group"
+      Parameters:
+        character_set_server: "utf8mb4"
+        collation_server: "utf8mb4_general_ci"
+        long_query_time: 1
+        slow_query_log: 1
+        time_zone: "Asia/Tokyo"
+      Tags:
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-aurora-cluster-parameter-group"
+  Aurora57dbOptionGroup:
+    Type: AWS::RDS::OptionGroup
+    Properties:
+      EngineName: "aurora-mysql"
+      MajorEngineVersion: "5.7"
+      OptionGroupDescription: !Sub "${Service} ${Env} aurora option group"
+      Tags:
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-aurora-option-group"
+  Aurora57dbInstanceParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Family: "aurora-mysql5.7"
+      Description: !Sub "${Service} ${Env} aurora instance parameter group"
+      Tags:
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-aurora-instance-parameter-group"
+  # ------------------------------------------------------------#
+  # Aurora DB
+  # ------------------------------------------------------------#
+  Aurora57dbCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      BackupRetentionPeriod: 1
+      DBClusterIdentifier: !Sub "${Service}-${Env}-aurora-cluster"
+      DBClusterParameterGroupName: !Ref Aurora57dbClusterParameterGroup
+      DBSubnetGroupName: !Ref Aurora57dbSubnetGroup
+      DeletionProtection: False # あとでTrueに
+      EnableCloudwatchLogsExports:
+        - error
+        - slowquery
+      Engine: aurora-mysql
+      MasterUsername: !Ref DbMasterUser
+      MasterUserPassword: !Ref DbMasterPassword
+      Port: 3306
+      PreferredBackupWindow: "18:00-19:00"
+      PreferredMaintenanceWindow: "Sun:19:00-Sun:20:00"
+      StorageEncrypted: True
+      VpcSecurityGroupIds:
+        - Fn::ImportValue: !Sub "${Service}-${Env}-security-group-rds"
+      Tags:
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-aurora-cluster"
+  Aurora57dbInstance1:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AutoMinorVersionUpgrade: True
+      AvailabilityZone: ap-northeast-1a
+      DBInstanceClass: !FindInMap [ !Ref Env, Aurora, Size ]
+      DBInstanceIdentifier: !Sub "${Service}-${Env}-aurora-db1"
+      DBClusterIdentifier: !Ref Aurora57dbCluster
+      DBParameterGroupName: !Ref Aurora57dbInstanceParameterGroup
+      Engine: aurora-mysql
+      OptionGroupName: !Ref Aurora57dbOptionGroup
+      PubliclyAccessible: False
+      Tags:
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-aurora-db1"
+  Aurora57dbInstance2:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AutoMinorVersionUpgrade: True
+      AvailabilityZone: ap-northeast-1c
+      DBInstanceClass: !FindInMap [ !Ref Env, Aurora, Size ]
+      DBInstanceIdentifier: !Sub "${Service}-${Env}-aurora-db2"
+      DBClusterIdentifier: !Ref Aurora57dbCluster
+      DBParameterGroupName: !Ref Aurora57dbInstanceParameterGroup
+      Engine: aurora-mysql
+      OptionGroupName: !Ref Aurora57dbOptionGroup
+      PubliclyAccessible: False
+      Tags:
+        - Key: Env
+          Value: !Sub "${Env}"
+        - Key: Service
+          Value: !Sub "${Service}"
+        - Key: Name
+          Value: !Sub "${Service}-${Env}-aurora-db2"
+# ------------------------------------------------------------#
+# Output Parameters
+# ------------------------------------------------------------#
+Outputs:
+  DbClusterEndpoint:
+    Value: !GetAtt Aurora57dbCluster.Endpoint.Address
+    Export:
+      Name: !Sub "${Service}-${Env}-db-cluster-endpoint"
